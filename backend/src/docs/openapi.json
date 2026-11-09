@@ -1,0 +1,393 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Needs Platform Backend API",
+    "version": "1.0.0",
+    "description": "Production Modular Monolith API for Needs Service-Booking Platform built with Next.js App Router, PostgreSQL, PostGIS, Redis, BullMQ and Socket.IO."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT Access Token (issued by /api/v1/auth/otp/verify)"
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "object" },
+          "meta": { "type": "object" },
+          "error": { "type": "object" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/health/liveness": {
+      "get": {
+        "summary": "Liveness Probe",
+        "tags": ["Health"],
+        "responses": { "200": { "description": "Process is alive" } }
+      }
+    },
+    "/api/v1/health/readiness": {
+      "get": {
+        "summary": "Readiness Probe",
+        "tags": ["Health"],
+        "responses": { "200": { "description": "PostgreSQL, Redis and BullMQ are ready" } }
+      }
+    },
+    "/api/v1/auth/otp/send": {
+      "post": {
+        "summary": "Send Phone Login/Registration OTP",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "OTP dispatched" } }
+      }
+    },
+    "/api/v1/auth/otp/verify": {
+      "post": {
+        "summary": "Verify OTP and issue Access & Refresh tokens",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "Tokens issued" } }
+      }
+    },
+    "/api/v1/auth/token/refresh": {
+      "post": {
+        "summary": "Rotate Refresh Token",
+        "tags": ["Auth"],
+        "responses": { "200": { "description": "New tokens issued" } }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Revoke Session Token",
+        "tags": ["Auth"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Logged out" } }
+      }
+    },
+    "/api/v1/users/profile": {
+      "get": {
+        "summary": "Get Current User Profile",
+        "tags": ["Users"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Profile data" } }
+      },
+      "put": {
+        "summary": "Update Profile",
+        "tags": ["Users"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Profile updated" } }
+      }
+    },
+    "/api/v1/users/addresses": {
+      "get": {
+        "summary": "List Saved Addresses",
+        "tags": ["Users"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "User addresses" } }
+      },
+      "post": {
+        "summary": "Add Address",
+        "tags": ["Users"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Address added" } }
+      }
+    },
+    "/api/v1/providers/profile": {
+      "get": {
+        "summary": "Get Provider Profile",
+        "tags": ["Providers"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Provider profile" } }
+      }
+    },
+    "/api/v1/providers/kyc": {
+      "post": {
+        "summary": "Submit Provider KYC Documents",
+        "tags": ["Providers"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "KYC submitted" } }
+      }
+    },
+    "/api/v1/providers/availability": {
+      "patch": {
+        "summary": "Toggle Online/Offline Availability (Requires APPROVED status)",
+        "tags": ["Providers"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Availability toggled" } }
+      }
+    },
+    "/api/v1/admin/providers/verify": {
+      "post": {
+        "summary": "Admin KYC Review & Provider Verification",
+        "tags": ["Admin"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Provider verified or rejected" } }
+      }
+    },
+    "/api/v1/catalog/categories": {
+      "get": {
+        "summary": "List Hierarchical Categories",
+        "tags": ["Catalog"],
+        "responses": { "200": { "description": "Categories list" } }
+      },
+      "post": {
+        "summary": "Create Category (Admin only)",
+        "tags": ["Catalog"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Category created" } }
+      }
+    },
+    "/api/v1/catalog/services": {
+      "get": {
+        "summary": "List Service Offerings",
+        "tags": ["Catalog"],
+        "responses": { "200": { "description": "Services list" } }
+      },
+      "post": {
+        "summary": "Create Service Offering (Admin only)",
+        "tags": ["Catalog"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Service created" } }
+      }
+    },
+    "/api/v1/location/providers/current": {
+      "post": {
+        "summary": "Provider Ingests Current GPS Location",
+        "tags": ["Location"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Location saved & broadcast" } }
+      }
+    },
+    "/api/v1/location/providers/nearby": {
+      "get": {
+        "summary": "Query Nearby Approved Providers (PostGIS + Redis GEO)",
+        "tags": ["Location"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Nearby providers array" } }
+      }
+    },
+    "/api/v1/dispatch/bookings/{id}/accept": {
+      "post": {
+        "summary": "Provider Accepts Booking Assignment",
+        "tags": ["Dispatch"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Assignment accepted" } }
+      }
+    },
+    "/api/v1/dispatch/bookings/{id}/reject": {
+      "post": {
+        "summary": "Provider Declines Booking Assignment (triggers auto-redispatch)",
+        "tags": ["Dispatch"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Assignment rejected" } }
+      }
+    },
+    "/api/v1/bookings": {
+      "get": {
+        "summary": "List Bookings (Scoped by User Role)",
+        "tags": ["Bookings"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Paginated bookings" } }
+      },
+      "post": {
+        "summary": "Create Service Booking",
+        "tags": ["Bookings"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Booking created" } }
+      }
+    },
+    "/api/v1/bookings/{id}": {
+      "get": {
+        "summary": "Get Booking Details",
+        "tags": ["Bookings"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Booking details" } }
+      }
+    },
+    "/api/v1/bookings/{id}/transition": {
+      "post": {
+        "summary": "Transition Booking State Machine (Trip, Arrival, Work Start with OTP, Work Complete with OTP, Cancellation)",
+        "tags": ["Bookings"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "State transitioned" } }
+      }
+    },
+    "/api/v1/bookings/{id}/events": {
+      "get": {
+        "summary": "Get Immutable Audit Trail Ledger Events",
+        "tags": ["Bookings"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Event history" } }
+      }
+    },
+    "/api/v1/chat/conversations/{bookingId}": {
+      "get": {
+        "summary": "Get In-App Chat Conversation and Messages for Booking",
+        "tags": ["Chat"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Conversation and messages" } }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "summary": "Get User Notifications Inbox",
+        "tags": ["Notifications"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Notifications" } }
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "patch": {
+        "summary": "Mark Notification as Read",
+        "tags": ["Notifications"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Marked read" } }
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "summary": "Mark All Notifications as Read",
+        "tags": ["Notifications"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "All marked read" } }
+      }
+    },
+    "/api/v1/payments/initiate": {
+      "post": {
+        "summary": "Initiate Payment Checkout (bKash, Nagad, SSLCommerz)",
+        "tags": ["Payments"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Redirect URL provided" } }
+      }
+    },
+    "/api/v1/payments/webhooks/{gateway}": {
+      "post": {
+        "summary": "Gateway IPN / Webhook Callback",
+        "tags": ["Payments"],
+        "responses": { "200": { "description": "Webhook verified and processed" } }
+      }
+    },
+    "/api/v1/wallet/balance": {
+      "get": {
+        "summary": "Get Wallet Balance",
+        "tags": ["Wallet"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Balance in BDT" } }
+      }
+    },
+    "/api/v1/wallet/transactions": {
+      "get": {
+        "summary": "Get Double-Entry Ledger Transactions",
+        "tags": ["Wallet"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Transaction list" } }
+      }
+    },
+    "/api/v1/wallet/topup": {
+      "post": {
+        "summary": "Top Up Wallet Balance",
+        "tags": ["Wallet"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Wallet credited" } }
+      }
+    },
+    "/api/v1/wallet/payouts": {
+      "post": {
+        "summary": "Provider Requests Wallet Withdrawal / Payout",
+        "tags": ["Wallet"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Payout requested" } }
+      }
+    },
+    "/api/v1/coupons/validate": {
+      "post": {
+        "summary": "Validate Promo Code and Calculate Discount",
+        "tags": ["Coupons"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Discount calculated" } }
+      }
+    },
+    "/api/v1/coupons": {
+      "post": {
+        "summary": "Create Promotion Coupon (Admin only)",
+        "tags": ["Coupons"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Coupon created" } }
+      }
+    },
+    "/api/v1/reviews": {
+      "post": {
+        "summary": "Submit Rating and Review for Completed Booking",
+        "tags": ["Reviews"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Review saved" } }
+      }
+    },
+    "/api/v1/reviews/providers/{id}": {
+      "get": {
+        "summary": "List Reviews for a Provider",
+        "tags": ["Reviews"],
+        "responses": { "200": { "description": "Provider reviews" } }
+      }
+    },
+    "/api/v1/support/tickets": {
+      "get": {
+        "summary": "List Support Tickets",
+        "tags": ["Support"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Support tickets" } }
+      },
+      "post": {
+        "summary": "Create Support Ticket",
+        "tags": ["Support"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Ticket created" } }
+      }
+    },
+    "/api/v1/support/tickets/{id}": {
+      "get": {
+        "summary": "Get Ticket Details and Messages",
+        "tags": ["Support"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Ticket details" } }
+      }
+    },
+    "/api/v1/support/tickets/{id}/messages": {
+      "post": {
+        "summary": "Send Message in Support Ticket",
+        "tags": ["Support"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Message posted" } }
+      }
+    },
+    "/api/v1/analytics/overview": {
+      "get": {
+        "summary": "System KPI Overview (Admin only)",
+        "tags": ["Analytics"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Platform KPIs" } }
+      }
+    },
+    "/api/v1/analytics/revenue": {
+      "get": {
+        "summary": "Revenue Breakdown (Admin only)",
+        "tags": ["Analytics"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Revenue metrics" } }
+      }
+    }
+  }
+}
