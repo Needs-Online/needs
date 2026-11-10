@@ -119,10 +119,35 @@ export class AuthRepository {
     });
   }
 
+  async findSessionById(id: string): Promise<UserSession | null> {
+    return prisma.userSession.findUnique({
+      where: { id },
+    });
+  }
+
+  async listUserSessions(userId: string): Promise<UserSession[]> {
+    return prisma.userSession.findMany({
+      where: {
+        userId,
+        isValid: true,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async invalidateSession(id: string): Promise<void> {
     await prisma.userSession.update({
       where: { id },
       data: { isValid: false },
+    });
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    await prisma.userSession.delete({
+      where: { id },
     });
   }
 

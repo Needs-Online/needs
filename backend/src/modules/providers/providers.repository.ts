@@ -1,6 +1,11 @@
 import { prisma } from '@/database/prisma';
 import { Provider, ProviderKyc, ProviderStatus, KycStatus, Role } from '@prisma/client';
-import { RegisterProviderDto, SubmitKycDto, AssignServiceDto } from './dto/provider.dto';
+import {
+  RegisterProviderDto,
+  SubmitKycDto,
+  AssignServiceDto,
+  UpdateProviderMeDto,
+} from './dto/provider.dto';
 
 export class ProvidersRepository {
   async findByUserId(userId: string) {
@@ -63,6 +68,51 @@ export class ProvidersRepository {
       }
 
       return provider;
+    });
+  }
+
+  async updateProvider(providerId: string, data: UpdateProviderMeDto): Promise<Provider> {
+    return prisma.provider.update({
+      where: { id: providerId },
+      data,
+    });
+  }
+
+  async getProviderServices(providerId: string) {
+    return prisma.providerService.findMany({
+      where: { providerId },
+      include: {
+        service: {
+          include: {
+            category: true,
+          },
+        },
+      },
+    });
+  }
+
+  async setProviderServices(providerId: string, serviceIds: string[]) {
+    return prisma.$transaction(async (tx) => {
+      // Remove old associations
+      await tx.providerService.deleteMany({
+        where: { providerId },
+      });
+
+      // Create new associations
+      if (serviceIds.length > 0) {
+        await tx.providerService.createMany({
+          data: serviceIds.map((serviceId) => ({
+            providerId,
+            serviceId,
+            isActive: true,
+          })),
+        });
+      }
+
+      return tx.providerService.findMany({
+        where: { providerId },
+        include: { service: true },
+      });
     });
   }
 

@@ -1,6 +1,12 @@
 import { WalletRepository } from './wallet.repository';
-import { TopupWalletDto, RequestPayoutDto, ListTransactionsQueryDto } from './dto/wallet.dto';
-import { TransactionType, TransactionReason } from '@/common/enums';
+import {
+  TopupWalletDto,
+  RequestPayoutDto,
+  ListTransactionsQueryDto,
+  ListPayoutsQueryDto,
+  ProcessPayoutDto,
+} from './dto/wallet.dto';
+import { TransactionType, TransactionReason, PayoutStatus } from '@/common/enums';
 import { Decimal } from '@prisma/client/runtime/library';
 import { ForbiddenError, NotFoundError } from '@/common/errors/app-error';
 import { logger } from '@/common/utils/logger';
@@ -10,11 +16,16 @@ export class WalletService {
 
   async getWalletBalance(userId: string) {
     const wallet = await this.walletRepo.getOrCreateWallet(userId);
+    const balance = Number(wallet.balance);
+    const lockedBalance = Number(wallet.lockedBalance);
+    const availableBalance = Math.max(0, balance - lockedBalance);
+
     return {
       walletId: wallet.id,
-      balance: Number(wallet.balance),
+      balance,
+      lockedBalance,
+      availableBalance,
       currency: wallet.currency,
-      lockedBalance: Number(wallet.lockedBalance),
     };
   }
 
@@ -65,8 +76,45 @@ export class WalletService {
       success: true,
       payoutId: result.payout.id,
       status: result.payout.status,
-      remainingBalance: Number(result.transaction.balanceAfter),
+      remainingAvailableBalance: Number(result.availableBalance),
     };
+  }
+
+  async getProviderPayouts(providerId: string | undefined, query: ListPayoutsQueryDto) {
+    if (!providerId) {
+      throw new ForbiddenError('Only registered providers have payout history');
+    }
+
+    return this.walletRepo.findPayoutRequests({
+      providerId,
+      status: query.status as any,
+      page: query.page,
+      limit: query.limit,
+    });
+  }
+
+  async getAllPayouts(query: ListPayoutsQueryDto) {
+    return this.walletRepo.findPayoutRequests({
+      status: query.status as any,
+      page: query.page,
+      limit: query.limit,
+    });
+  }
+
+  async processPayout(adminUserId: string, payoutId: string, dto: ProcessPayoutDto) {
+    const result = await this.walletRepo.processPayout({
+      payoutId,
+      adminUserId,
+      status: dto.status as any,
+      rejectionReason: dto.rejectionReason,
+    });
+
+    logger.info(
+      { payoutId, adminUserId, status: dto.status },
+      'Payout request processed by administrator'
+    );
+
+    return result;
   }
 
   async creditProviderEarnings(bookingId: string, totalAmount: number, providerUserId: string) {

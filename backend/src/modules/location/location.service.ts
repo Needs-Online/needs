@@ -56,6 +56,9 @@ export class LocationService {
       latitude: dto.latitude,
       longitude: dto.longitude,
       city: dto.city,
+      heading: dto.heading,
+      speed: dto.speed,
+      accuracy: dto.accuracy,
       timestamp: new Date().toISOString(),
     });
 
@@ -64,6 +67,9 @@ export class LocationService {
       providerId,
       latitude: dto.latitude,
       longitude: dto.longitude,
+      heading: dto.heading,
+      speed: dto.speed,
+      accuracy: dto.accuracy,
       lastLocationUpdate: new Date().toISOString(),
     };
   }

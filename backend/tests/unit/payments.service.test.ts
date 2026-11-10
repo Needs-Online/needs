@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PaymentsService } from '@/modules/payments/payments.service';
 import { PaymentsRepository } from '@/modules/payments/payments.repository';
 import { BookingsRepository } from '@/modules/bookings/bookings.repository';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { PaymentMethod, PaymentStatus } from '@/common/enums';
 import { Decimal } from '@prisma/client/runtime/library';
 import { ForbiddenError, NotFoundError } from '@/common/errors/app-error';
@@ -22,10 +23,18 @@ vi.mock('@/infra/queue/queue.manager', () => ({
   },
 }));
 
+vi.mock('@/common/services/idempotency.service', () => ({
+  idempotencyService: {
+    get: vi.fn().mockResolvedValue(null),
+    save: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 describe('PaymentsService (Unit)', () => {
   let paymentsService: PaymentsService;
   let mockPaymentsRepo: Partial<PaymentsRepository>;
   let mockBookingsRepo: Partial<BookingsRepository>;
+  let mockNotifService: Partial<NotificationsService>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,14 +43,19 @@ describe('PaymentsService (Unit)', () => {
       findPaymentByGatewayTxId: vi.fn(),
       recordWebhook: vi.fn().mockResolvedValue({ id: 'wh-1' }),
       markPaymentSuccess: vi.fn(),
+      findPaymentByBookingId: vi.fn(),
     };
     mockBookingsRepo = {
       findById: vi.fn(),
     };
+    mockNotifService = {
+      sendNotification: vi.fn().mockResolvedValue({ id: 'notif-1' } as any),
+    };
 
     paymentsService = new PaymentsService(
       mockPaymentsRepo as PaymentsRepository,
-      mockBookingsRepo as BookingsRepository
+      mockBookingsRepo as BookingsRepository,
+      mockNotifService as NotificationsService
     );
   });
 
@@ -93,6 +107,7 @@ describe('PaymentsService (Unit)', () => {
       amount: new Decimal('1500.00'),
       status: PaymentStatus.PENDING,
       gateway: PaymentMethod.BKASH,
+      booking: { provider: { userId: 'prov-user' } },
     });
 
     mockPaymentsRepo.markPaymentSuccess = vi.fn().mockResolvedValue({
@@ -109,5 +124,26 @@ describe('PaymentsService (Unit)', () => {
     expect(result.processed).toBe(true);
     expect(mockPaymentsRepo.recordWebhook).toHaveBeenCalled();
     expect(mockPaymentsRepo.markPaymentSuccess).toHaveBeenCalled();
+  });
+
+  it('should return payment details for authorized customer', async () => {
+    mockPaymentsRepo.findPaymentByBookingId = vi.fn().mockResolvedValue({
+      id: 'pmt-1',
+      bookingId: 'bk-123',
+      customerId: 'cust-1',
+      amount: new Decimal('1500.00'),
+      currency: 'BDT',
+      gateway: PaymentMethod.BKASH,
+      gatewayTransactionId: 'BKASH-123456',
+      status: PaymentStatus.PAID,
+      paidAt: new Date(),
+      createdAt: new Date(),
+      booking: { provider: { userId: 'prov-1' } },
+    });
+
+    const result = await paymentsService.getPaymentDetails('cust-1', 'bk-123');
+    expect(result.id).toBe('pmt-1');
+    expect(result.amount).toBe(1500);
+    expect(result.status).toBe(PaymentStatus.PAID);
   });
 });

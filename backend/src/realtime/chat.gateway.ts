@@ -208,6 +208,10 @@ export function registerChatGateway(io: Server): Namespace {
       });
     });
 
+    socket.on('leave_conversation', (data: { conversationId: string }) => {
+      socket.leave(`conversation:${data.conversationId}`);
+    });
+
     socket.on('disconnect', (reason) => {
       logger.info({ socketId: socket.id, reason }, 'User disconnected from /chat');
     });

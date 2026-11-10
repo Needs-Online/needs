@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { withAuth, AuthenticatedNextRequest } from '@/common/guards/auth.guard';
+import { withAuth, AuthenticatedNextRequest, RouteContext } from '@/common/guards/auth.guard';
 import { prisma } from '@/database/prisma';
 import { successResponse } from '@/common/dto/response.dto';
 import { NotFoundError, ForbiddenError, handleApiError } from '@/common/errors/app-error';
@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 export const GET = withAuth<{ bookingId: string }>(
   async (
     req: AuthenticatedNextRequest,
-    context: { params: Promise<{ bookingId: string }> }
+    context: RouteContext<{ bookingId: string }>
   ) => {
     try {
       const { bookingId } = await context.params;

@@ -32,7 +32,12 @@ export class PaymentsRepository {
     return prisma.payment.findUnique({
       where: { bookingId },
       include: {
-        booking: true,
+        booking: {
+          include: {
+            customer: true,
+            provider: true,
+          },
+        },
       },
     });
   }
@@ -41,7 +46,12 @@ export class PaymentsRepository {
     return prisma.payment.findUnique({
       where: { gatewayTransactionId },
       include: {
-        booking: true,
+        booking: {
+          include: {
+            customer: true,
+            provider: true,
+          },
+        },
       },
     });
   }
@@ -76,6 +86,9 @@ export class PaymentsRepository {
           gatewayTransactionId,
           paidAt: new Date(),
           metadata: metadata as Prisma.InputJsonValue | undefined,
+        },
+        include: {
+          booking: true,
         },
       });
 

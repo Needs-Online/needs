@@ -13,3 +13,10 @@ export const POST = withRoles(
     return controller.requestPayout(req);
   }
 );
+
+export const GET = withRoles(
+  [Role.PROVIDER],
+  async (req: AuthenticatedNextRequest) => {
+    return controller.listPayouts(req);
+  }
+);

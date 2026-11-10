@@ -94,3 +94,27 @@ Implemented via Redis sliding-window token bucket (`src/common/middleware/rate-l
 
 - Deletion policies on financial ledger tables (`wallets`, `wallet_transactions`, `payout_requests`, `payments`) and lifecycle history (`booking_events`) use `onDelete: Restrict`.
 - Soft-deletion (`deletedAt`) is used on `users` to ensure account deactivations never trigger cascade deletion of financial transactions.
+
+---
+
+## 8. KYC Cryptographic Protection & Sensitive Data Storage (Phase 2)
+
+- **AES-256-GCM Encryption at Rest:**
+  - Sensitive National ID (NID) numbers are encrypted prior to insertion into the `provider_kyc.nidNumber` database column.
+  - Encryption employs authenticated AES-256-GCM with a 32-byte key derived via `crypto.scryptSync` from system secrets.
+  - Uses an individual 96-bit (12-byte) cryptographically secure initialization vector (IV) per record.
+  - Stored format: `iv:authTag:ciphertext`.
+- **Zero Plaintext Leakage:**
+  - Plaintext NID numbers are never returned in public or authenticated user responses.
+  - Read endpoints strictly return masked strings (`maskNid(decrypted)`), displaying only the last 4 digits (e.g. `******1234`).
+  - Strict Zod validation checks Bangladeshi NID formats (10-digit Smart Card, 13-digit standard, or 17-digit with birth year).
+
+---
+
+## 9. Administrative Role-Based Access Control & Invariants
+
+- **Multi-Role Segmentation:** `SUPER_ADMIN`, `OPERATIONS`, `SUPPORT`, `FINANCE`.
+- **Last Super Admin Invariant:** Protective operational guard enforces that the last remaining `SUPER_ADMIN` cannot be deleted, deactivated, or demoted (`assertCanDeactivateSuperAdmin`), eliminating orphan-admin risk.
+- **Append-Only Administrative Audit Ledger:**
+  - Administrative mutations to provider profiles, KYC records, and catalog configurations generate immutable entries in `audit_logs`.
+  - Captures actor ID, IP address, user agent, target entity, action code, and sanitized payload changes.

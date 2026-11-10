@@ -24,7 +24,7 @@
 |---|---|---|---|---|
 | **Analytics Module** | Platform KPI overview, GMV, platform revenue, provider rating aggregations | Unit tests (`analytics.service.test.ts`), `next build` | **VERIFIED** | Restricted strictly to administrative roles |
 | **ClickHouse Adapter** | PII-sanitized analytics event streaming interface | Code audit (`clickhouse.adapter.ts`) | **VERIFIED** | Strips passwords, tokens, NID, phone numbers before logging |
-| **OpenAPI 3.1 Specification** | Full specification covering all 44 endpoints, schemas, parameters, security schemes | Route `/api/docs/openapi.json`, Swagger UI | **VERIFIED** | Complete interactive documentation rendered |
+| **OpenAPI 3.1 Specification** | Full specification covering all 68 documented operations, schemas, parameters, security schemes | Route `/api/docs/openapi.json`, Swagger UI | **VERIFIED** | Complete interactive documentation rendered |
 | **Swagger UI Route** | Next.js interactive API documentation interface | Next.js build compilation (`/api/docs`) | **VERIFIED** | Interactive testing interface ready |
 | **Master Documentation** | `README.md`, `API_DOCUMENTATION.md`, `IMPLEMENTATION_REPORT.md` | Workspace filesystem audit | **VERIFIED** | Complete setup, architecture, and API guides produced |
 
@@ -59,11 +59,11 @@
 
 | Component / Module | Implementation State | Verification Method | Verification Status | Notes |
 |---|---|---|---|---|
-| **Location Module** | HTTP provider ingestion, Redis GEO partitioned by city/category (15m TTL), PostGIS query fallback, real-time location event publishing | Unit tests (`location.service.test.ts`), `next build` | **VERIFIED** | Enforces provider role, indexes cast to geography, coordinates ordered (lon, lat) |
-| **Dispatch Engine** | Radius expansion (3km -> 10km), multi-factor candidate ranking (40% rating, 40% proximity, 20% experience), atomic Redis lock, BullMQ 45s delayed acceptance timer | Unit tests (`dispatch.service.test.ts`), `next build` | **VERIFIED** | Auto-redispatches to candidate #2 on rejection or timeout; prevents double-booking via `lock:booking:assign:<bookingId>` |
-| **Booking State Machine** | Strict state machine (`DRAFT` -> `REQUESTED` -> `MATCHING` -> `ASSIGNED` -> `PROVIDER_EN_ROUTE` -> `PROVIDER_ARRIVED` -> `IN_PROGRESS` -> `COMPLETED`; terminal `CANCELLED`, `EXPIRED`) | Unit tests (`booking-state-machine.test.ts`, `bookings.service.test.ts`) | **VERIFIED** | Strict validation prevents skipping states; terminal states cannot transition out |
-| **Immutable Ledger** | Every state transition writes a `BookingEvent` inside atomic `prisma.$transaction` | Unit tests (`bookings.service.test.ts`), repository inspection | **VERIFIED** | `ON DELETE RESTRICT` ensures event audit trail cannot be silently modified or erased |
-| **Job OTP Verification** | Cryptographically secure 4-digit numeric startOtp & endOtp | Unit tests (`booking-state-machine.test.ts`, `bookings.service.test.ts`) | **VERIFIED** | Provider cannot start work without valid customer startOtp; masked from provider until arriving |
+| **Location Module** | HTTP provider ingestion with heading/speed/accuracy, Bangladesh bounds validation, Redis GEO partitioned by city/category (15m TTL), PostGIS query fallback, real-time telemetry publishing | Unit tests (`location-telemetry.test.ts`, `location.service.test.ts`), `next build` | **VERIFIED** | Enforces provider role, indexes cast to geography, coordinates ordered (lon, lat) |
+| **Dispatch Engine** | Radius expansion (3km -> 10km), multi-factor candidate ranking (40% rating, 40% proximity, 20% experience), atomic Redis lock, BullMQ 45s delayed acceptance timer | Unit tests (`dispatch-flow.test.ts`, `dispatch.service.test.ts`), `next build` | **VERIFIED** | Auto-redispatches to candidate #2 on rejection or timeout; prevents double-booking via `lock:booking:assign:<bookingId>` |
+| **Booking State Machine** | Strict state machine (`DRAFT` -> `REQUESTED` -> `MATCHING` -> `ASSIGNED` -> `PROVIDER_EN_ROUTE` -> `PROVIDER_ARRIVED` -> `IN_PROGRESS` -> `COMPLETED`; terminal `CANCELLED`, `EXPIRED`) | Unit tests (`booking-lifecycle.test.ts`, `booking-state-machine.test.ts`, `bookings.service.test.ts`) | **VERIFIED** | Strict validation prevents skipping states; terminal states cannot transition out |
+| **Immutable Ledger** | Every state transition writes a `BookingEvent` inside atomic `prisma.$transaction` | Unit tests (`booking-lifecycle.test.ts`, `bookings.service.test.ts`), repository inspection | **VERIFIED** | `ON DELETE RESTRICT` ensures event audit trail cannot be silently modified or erased |
+| **Job OTP Verification** | Cryptographically secure 4-digit numeric startOtp & endOtp | Unit tests (`booking-lifecycle.test.ts`, `booking-state-machine.test.ts`, `bookings.service.test.ts`) | **VERIFIED** | Provider cannot start work without valid customer startOtp; masked from provider until arriving |
 | **BullMQ Worker Processors** | `dispatch-timeout` processor (auto-redispatch) and `booking-expiry` processor (auto-cancels unassigned bookings after 15m) | Worker bootstrap (`workers/index.ts`), code audit | **VERIFIED** | Background workers registered and decoupled from Next.js HTTP server |
 
 ---
@@ -72,11 +72,13 @@
 
 | Component / Module | Implementation State | Verification Method | Verification Status | Notes |
 |---|---|---|---|---|
-| **Auth Module** | OTP lifecycle, token rotation, token family revocation, logout | Unit tests (`auth.service.test.ts`), `next build` | **VERIFIED** | 5-min OTP expiry, max 3 resends/hr, lockout after 5 fails, single-use refresh token rotation |
-| **Users Module** | Profile management, address book CRUD | Unit tests (`users.service.test.ts`), `next build` | **VERIFIED** | Address CRUD with primary flag toggling |
-| **Catalog Module** | Hierarchical categories, service offerings, slug uniqueness | Unit tests (`catalog.service.test.ts`), `next build` | **VERIFIED** | Slug conflict checks, category and service queries |
-| **Providers Module** | Provider onboarding, KYC submission, availability toggle, service mapping | Unit tests (`providers.service.test.ts`), `next build` | **VERIFIED** | BR-01 enforced: Only APPROVED providers can toggle online; initial status is PENDING_VERIFICATION |
-| **Admin Verification** | Admin KYC review (Approve/Reject with rejection reason) | Integration via `withAdminAuth`, `next build` | **VERIFIED** | Admin guard restricts access to administrative roles |
+| **Auth & Phone Normalization** | Bangladesh E.164 normalization (+8801[3-9]\d{8}), 5-min OTP, rate limiting, OTP provider abstraction | Unit tests (`phone-crypto.test.ts`, `auth.service.test.ts`), `next build` | **VERIFIED** | Supports 013-019 prefixes; rejects invalid operators; integrates Mock and SMS gateway adapters |
+| **Session Management** | Single-use refresh token rotation, token family theft revocation, multi-device listing and revocation | Unit tests (`auth-sessions.test.ts`), `next build` | **VERIFIED** | SHA-256 hashed storage in `user_sessions`; invalidates family on reuse attempt |
+| **Users Module & Addresses** | Profile CRUD, soft deletion with session invalidation, single default address transaction, BD coordinate bounding box | Unit tests (`users-me.test.ts`, `users.service.test.ts`), `next build` | **VERIFIED** | Strict transaction demotes existing default addresses; validates Lat (20.5-26.7) and Lon (88.0-92.7) |
+| **Providers Module** | Provider onboarding application (`PENDING`), profile update, service binding, BR-01 availability toggle | Unit tests (`providers-apply.test.ts`, `providers.service.test.ts`), `next build` | **VERIFIED** | BR-01 strictly enforced: Only APPROVED providers can toggle online; 403 Forbidden otherwise |
+| **KYC & Sensitive Encryption** | AES-256-GCM encryption at rest for NID numbers, zero plaintext leakage, automatic masking (`maskNid`) | Unit tests (`phone-crypto.test.ts`, `kyc.service.test.ts`), `next build` | **VERIFIED** | Stored as `iv:authTag:ciphertext`; responses only return masked NID (`******1234`) |
+| **Catalog Slugs & Admin** | Category hierarchy, slug discovery (`/categories/[slug]`, `/services/[id]`), admin CRUD with BDT pricing validation | Unit tests (`catalog-slug.test.ts`, `catalog.service.test.ts`), `next build` | **VERIFIED** | Dynamic routes handle both UUID and kebab-case slugs without route collision |
+| **Admin RBAC & Audit Trails** | Role enforcement (`SUPER_ADMIN`, `OPERATIONS`, `SUPPORT`, `FINANCE`), last super admin protection, immutable audit logs | Unit tests (`admin.service.test.ts`), `next build` | **VERIFIED** | Every administrative mutation generates an immutable record in `audit_logs` |
 
 ---
 

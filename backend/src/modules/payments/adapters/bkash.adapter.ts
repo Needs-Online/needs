@@ -19,7 +19,7 @@ export class BkashAdapter implements PaymentGatewayAdapter {
       'Initiating bKash payment gateway checkout'
     );
 
-    // In production, exchanges credentials for id_token, calls /tokenized/checkout/create
+    // In production, bKash tokenized checkout returns paymentID and bkashURL
     const redirectUrl = `${paymentConfig.bkash.baseUrl}/checkout?paymentID=${gatewayTransactionId}&amount=${params.amount}`;
 
     return {
@@ -28,17 +28,59 @@ export class BkashAdapter implements PaymentGatewayAdapter {
     };
   }
 
-  async verifyWebhook(payload: unknown, signature?: string): Promise<WebhookVerificationResult> {
-    const data = payload as Record<string, unknown>;
+  async verifyWebhook(
+    payload: unknown,
+    signature?: string,
+    rawBody?: string
+  ): Promise<WebhookVerificationResult> {
+    const data = (payload || {}) as Record<string, unknown>;
     const paymentId = (data.paymentID || data.paymentId || data.transactionId) as string;
     const amount = Number(data.amount || 0);
-    const status = (data.transactionStatus || data.status || '') as string;
+    const status = ((data.transactionStatus || data.status || '') as string).toUpperCase();
 
-    const isPaid = status.toUpperCase() === 'COMPLETED' || status.toUpperCase() === 'SUCCESS';
+    // 1. Validate mandatory fields
+    if (!paymentId) {
+      return {
+        isValid: false,
+        gatewayTransactionId: '',
+        amount: 0,
+        isPaid: false,
+        rejectionReason: 'Missing bKash paymentID',
+      };
+    }
+
+    // 2. Cryptographic signature check (HMAC-SHA256)
+    if (signature && paymentConfig.bkash.appSecret) {
+      const contentToSign = rawBody || JSON.stringify(payload);
+      const expectedSignature = crypto
+        .createHmac('sha256', paymentConfig.bkash.appSecret)
+        .update(contentToSign)
+        .digest('hex');
+
+      // Constant-time comparison to prevent timing attacks
+      const sigBuf = Buffer.from(signature, 'utf8');
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+
+      if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+        logger.warn(
+          { paymentId, gateway: this.gateway },
+          'bKash webhook signature mismatch'
+        );
+        return {
+          isValid: false,
+          gatewayTransactionId: paymentId,
+          amount,
+          isPaid: false,
+          rejectionReason: 'Invalid HMAC signature',
+        };
+      }
+    }
+
+    const isPaid = status === 'COMPLETED' || status === 'SUCCESS';
 
     return {
-      isValid: Boolean(paymentId),
-      gatewayTransactionId: paymentId || '',
+      isValid: true,
+      gatewayTransactionId: paymentId,
       amount,
       isPaid,
       metadata: data,

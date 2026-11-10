@@ -23,3 +23,10 @@ export const listTicketsQuerySchema = z.object({
 });
 
 export type ListTicketsQueryDto = z.infer<typeof listTicketsQuerySchema>;
+
+export const updateTicketStatusSchema = z.object({
+  status: z.nativeEnum(TicketStatus),
+  assignedAdminId: z.string().uuid().optional(),
+});
+
+export type UpdateTicketStatusDto = z.infer<typeof updateTicketStatusSchema>;

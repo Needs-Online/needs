@@ -22,10 +22,11 @@ export class ClickHouseAdapter {
   private sanitizePII(event: AnalyticsEvent): AnalyticsEvent {
     const sanitizedMeta = { ...(event.metadata || {}) };
 
-    // Strip sensitive fields
-    const sensitiveKeys = ['nid', 'phone', 'token', 'password', 'otp', 'creditCard', 'accountNumber'];
+    // Strip sensitive fields (case-insensitive substring check)
+    const sensitiveKeys = ['nid', 'phone', 'token', 'password', 'otp', 'creditcard', 'account', 'card'];
     for (const key of Object.keys(sanitizedMeta)) {
-      if (sensitiveKeys.some((s) => key.toLowerCase().includes(s))) {
+      const lowerKey = key.toLowerCase();
+      if (sensitiveKeys.some((s) => lowerKey.includes(s))) {
         sanitizedMeta[key] = '[REDACTED]';
       }
     }

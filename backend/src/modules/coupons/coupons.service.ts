@@ -1,5 +1,5 @@
 import { CouponsRepository } from './coupons.repository';
-import { ValidateCouponDto, CreateCouponDto } from './dto/coupon.dto';
+import { ValidateCouponDto, CreateCouponDto, ListCouponsQueryDto } from './dto/coupon.dto';
 import { DiscountType } from '@/common/enums';
 import { BadRequestError, ConflictError } from '@/common/errors/app-error';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -71,6 +71,28 @@ export class CouponsService {
       perUserLimit: dto.perUserLimit,
       validFrom: new Date(dto.validFrom),
       validUntil: new Date(dto.validUntil),
+    });
+  }
+
+  async listCoupons(query: ListCouponsQueryDto, isAdmin: boolean) {
+    return this.couponsRepo.findCoupons({
+      isActiveOnly: !isAdmin || query.isActiveOnly,
+      page: query.page,
+      limit: query.limit,
+    });
+  }
+
+  async redeemCoupon(data: {
+    couponId: string;
+    userId: string;
+    bookingId: string;
+    discountApplied: number;
+  }) {
+    return this.couponsRepo.recordRedemption({
+      couponId: data.couponId,
+      userId: data.userId,
+      bookingId: data.bookingId,
+      discountApplied: new Decimal(data.discountApplied),
     });
   }
 }

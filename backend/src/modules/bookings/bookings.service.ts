@@ -1,18 +1,24 @@
 import { BookingsRepository } from './bookings.repository';
 import { CatalogRepository } from '@/modules/catalog/catalog.repository';
+import { DispatchService } from '@/modules/dispatch/dispatch.service';
 import { CreateBookingDto, TransitionBookingDto, ListBookingsQueryDto } from './dto/booking.dto';
 import { BookingStateMachine } from './booking-state-machine';
 import { BookingStatus, Role } from '@/common/enums';
 import { NotFoundError, BadRequestError, ForbiddenError } from '@/common/errors/app-error';
 import { getQueue, QUEUE_NAMES } from '@/infra/queue/queue.manager';
 import { publishEvent, REDIS_KEYS } from '@/infra/redis/redis.client';
-import { Prisma } from '@prisma/client';
+import { logger } from '@/common/utils/logger';
 
 export class BookingsService {
+  private dispatchService: DispatchService;
+
   constructor(
     private readonly bookingsRepo: BookingsRepository = new BookingsRepository(),
-    private readonly catalogRepo: CatalogRepository = new CatalogRepository()
-  ) {}
+    private readonly catalogRepo: CatalogRepository = new CatalogRepository(),
+    dispatchService?: DispatchService
+  ) {
+    this.dispatchService = dispatchService || new DispatchService();
+  }
 
   async createBooking(customerId: string, dto: CreateBookingDto) {
     const service = await this.catalogRepo.findServiceById(dto.serviceId);
@@ -204,6 +210,13 @@ export class BookingsService {
       actorId: userId,
       timestamp: new Date().toISOString(),
     });
+
+    // Trigger intelligent dispatch if transitioning to MATCHING
+    if (targetStatus === BookingStatus.MATCHING) {
+      this.dispatchService.dispatchBooking(bookingId).catch((err) => {
+        logger.error({ err, bookingId }, 'Failed to trigger dispatch for matching booking');
+      });
+    }
 
     return updated;
   }

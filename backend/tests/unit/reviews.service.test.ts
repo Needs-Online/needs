@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ReviewsService } from '@/modules/reviews/reviews.service';
 import { ReviewsRepository } from '@/modules/reviews/reviews.repository';
 import { BookingsRepository } from '@/modules/bookings/bookings.repository';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { BookingStatus } from '@/common/enums';
 import { BadRequestError, ConflictError } from '@/common/errors/app-error';
 
@@ -9,6 +10,7 @@ describe('ReviewsService (Unit)', () => {
   let reviewsService: ReviewsService;
   let mockReviewsRepo: Partial<ReviewsRepository>;
   let mockBookingsRepo: Partial<BookingsRepository>;
+  let mockNotifService: Partial<NotificationsService>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -21,10 +23,14 @@ describe('ReviewsService (Unit)', () => {
     mockBookingsRepo = {
       findById: vi.fn(),
     };
+    mockNotifService = {
+      sendNotification: vi.fn().mockResolvedValue({ id: 'notif-1' } as any),
+    };
 
     reviewsService = new ReviewsService(
       mockReviewsRepo as ReviewsRepository,
-      mockBookingsRepo as BookingsRepository
+      mockBookingsRepo as BookingsRepository,
+      mockNotifService as NotificationsService
     );
   });
 
@@ -34,11 +40,14 @@ describe('ReviewsService (Unit)', () => {
       customerId: 'cust-1',
       providerId: 'prov-1',
       status: BookingStatus.COMPLETED,
+      provider: { userId: 'prov-user-1' },
     });
     mockReviewsRepo.findReviewByBookingId = vi.fn().mockResolvedValue(null);
     mockReviewsRepo.createReview = vi.fn().mockResolvedValue({
       id: 'rev-1',
       bookingId: 'bk-123',
+      customerId: 'cust-1',
+      providerId: 'prov-1',
       rating: 5,
       comment: 'Excellent service!',
     });
@@ -50,8 +59,13 @@ describe('ReviewsService (Unit)', () => {
     });
 
     expect(result.id).toBe('rev-1');
-    expect(mockReviewsRepo.createReview).toHaveBeenCalled();
-    expect(mockReviewsRepo.updateProviderRating).toHaveBeenCalledWith('prov-1', 5);
+    expect(mockReviewsRepo.createReview).toHaveBeenCalledWith({
+      bookingId: 'bk-123',
+      customerId: 'cust-1',
+      providerId: 'prov-1',
+      rating: 5,
+      comment: 'Excellent service!',
+    });
   });
 
   it('should reject review if booking is not completed', async () => {

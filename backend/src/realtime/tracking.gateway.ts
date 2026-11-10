@@ -54,7 +54,15 @@ export function registerTrackingGateway(io: Server): Namespace {
     socket.on(
       'provider:location:update',
       async (
-        data: { bookingId: string; latitude: number; longitude: number; city?: string },
+        data: {
+          bookingId: string;
+          latitude: number;
+          longitude: number;
+          city?: string;
+          heading?: number;
+          speed?: number;
+          accuracy?: number;
+        },
         callback?: (res: unknown) => void
       ) => {
         try {
@@ -63,7 +71,7 @@ export function registerTrackingGateway(io: Server): Namespace {
             return;
           }
 
-          const { bookingId, latitude, longitude, city = 'Dhaka' } = data;
+          const { bookingId, latitude, longitude, city = 'Dhaka', heading, speed, accuracy } = data;
           const room = `booking:${bookingId}`;
 
           // Broadcast to connected customer in tracking room
@@ -71,6 +79,9 @@ export function registerTrackingGateway(io: Server): Namespace {
             providerId: user.providerId,
             latitude,
             longitude,
+            heading,
+            speed,
+            accuracy,
             timestamp: new Date().toISOString(),
           });
 
@@ -84,6 +95,10 @@ export function registerTrackingGateway(io: Server): Namespace {
         }
       }
     );
+
+    socket.on('leave_booking', (data: { bookingId: string }) => {
+      socket.leave(`booking:${data.bookingId}`);
+    });
 
     socket.on('disconnect', (reason) => {
       logger.info({ socketId: socket.id, reason }, 'User disconnected from /tracking');

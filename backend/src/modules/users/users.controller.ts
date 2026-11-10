@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { UsersService } from './users.service';
-import { updateProfileSchema, createAddressSchema } from './dto/user.dto';
+import { updateProfileSchema, createAddressSchema, updateAddressSchema } from './dto/user.dto';
 import { validateBody } from '@/common/validators/zod.validator';
 import { successResponse } from '@/common/dto/response.dto';
 import { handleApiError } from '@/common/errors/app-error';
@@ -42,6 +42,25 @@ export class UsersController {
       const dto = await validateBody(req, createAddressSchema);
       const address = await this.usersService.addAddress(req.user.userId, dto);
       return NextResponse.json(successResponse(address, 'Address saved successfully'), { status: 201 });
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async updateAddress(req: AuthenticatedNextRequest, addressId: string): Promise<NextResponse> {
+    try {
+      const dto = await validateBody(req, updateAddressSchema);
+      const address = await this.usersService.updateAddress(req.user.userId, addressId, dto);
+      return NextResponse.json(successResponse(address, 'Address updated successfully'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async setDefaultAddress(req: AuthenticatedNextRequest, addressId: string): Promise<NextResponse> {
+    try {
+      const address = await this.usersService.setDefaultAddress(req.user.userId, addressId);
+      return NextResponse.json(successResponse(address, 'Default address set successfully'));
     } catch (error) {
       return handleApiError(error);
     }

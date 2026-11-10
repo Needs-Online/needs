@@ -9,8 +9,24 @@ export const registerProviderSchema = z.object({
 
 export type RegisterProviderDto = z.infer<typeof registerProviderSchema>;
 
+export const applyProviderSchema = registerProviderSchema;
+export type ApplyProviderDto = RegisterProviderDto;
+
+export const updateProviderMeSchema = z.object({
+  bio: z.string().max(500).optional(),
+  experienceYears: z.number().int().min(0).max(50).optional(),
+});
+
+export type UpdateProviderMeDto = z.infer<typeof updateProviderMeSchema>;
+
+export const updateProviderServicesSchema = z.object({
+  serviceIds: z.array(z.string().uuid()).min(1, 'At least one service must be selected'),
+});
+
+export type UpdateProviderServicesDto = z.infer<typeof updateProviderServicesSchema>;
+
 export const submitKycSchema = z.object({
-  nidNumber: z.string().min(10).max(30),
+  nidNumber: z.string().min(10, 'NID must be at least 10 characters').max(30),
   nidFrontUrl: z.string().url('NID Front URL must be a valid URL'),
   nidBackUrl: z.string().url('NID Back URL must be a valid URL'),
   tradeLicenseNumber: z.string().optional(),

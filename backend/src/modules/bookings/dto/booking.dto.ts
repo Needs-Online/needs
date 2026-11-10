@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { BookingStatus } from '@/common/enums';
+import { bdLatitudeSchema, bdLongitudeSchema } from '@/modules/users/dto/user.dto';
 
 export const createBookingSchema = z.object({
   serviceId: z.string().uuid('Invalid service ID'),
   addressLine: z.string().min(5, 'Address line must be at least 5 characters'),
   city: z.string().min(2).default('Dhaka'),
-  latitude: z.number().min(-90).max(90, 'Invalid latitude'),
-  longitude: z.number().min(-180).max(180, 'Invalid longitude'),
+  latitude: bdLatitudeSchema,
+  longitude: bdLongitudeSchema,
   scheduledAt: z.string().datetime().optional(),
 });
 

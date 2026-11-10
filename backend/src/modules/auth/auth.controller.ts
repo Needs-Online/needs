@@ -75,4 +75,33 @@ export class AuthController {
       return handleApiError(error);
     }
   }
+
+  async logoutAll(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    try {
+      await this.authService.logoutAll(req.user.userId);
+      return NextResponse.json(
+        successResponse({ loggedOutAll: true }, 'All active sessions terminated successfully')
+      );
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async listSessions(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    try {
+      const sessions = await this.authService.listSessions(req.user.userId);
+      return NextResponse.json(successResponse(sessions, 'Active sessions retrieved successfully'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async revokeSession(req: AuthenticatedNextRequest, sessionId: string): Promise<NextResponse> {
+    try {
+      await this.authService.revokeSession(req.user.userId, sessionId);
+      return NextResponse.json(successResponse({ revoked: true }, 'Session revoked successfully'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
 }

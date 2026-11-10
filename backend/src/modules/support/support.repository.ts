@@ -97,4 +97,14 @@ export class SupportRepository {
       },
     });
   }
+
+  async findFaqs(category?: string) {
+    const where: Prisma.FaqWhereInput = { isPublished: true };
+    if (category) where.category = category;
+
+    return prisma.faq.findMany({
+      where,
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
 }

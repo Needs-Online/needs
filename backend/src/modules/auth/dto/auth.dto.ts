@@ -1,24 +1,27 @@
 import { z } from 'zod';
+import { normalizeBangladeshPhone } from '@/common/utils/phone.utils';
+
+export const bdPhoneSchema = z.string().transform((val, ctx) => {
+  try {
+    return normalizeBangladeshPhone(val);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Invalid Bangladesh mobile number (+8801[3-9]XXXXXXXX)';
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message,
+    });
+    return z.NEVER;
+  }
+});
 
 export const sendOtpSchema = z.object({
-  phone: z
-    .string()
-    .min(10, 'Phone number must be at least 10 characters')
-    .max(15, 'Phone number too long')
-    .regex(
-      /^\+?[1-9]\d{8,14}$/,
-      'Invalid phone number format (must be valid international E.164 or national format)'
-    ),
+  phone: bdPhoneSchema,
 });
 
 export type SendOtpDto = z.infer<typeof sendOtpSchema>;
 
 export const verifyOtpSchema = z.object({
-  phone: z
-    .string()
-    .min(10)
-    .max(15)
-    .regex(/^\+?[1-9]\d{8,14}$/, 'Invalid phone number format'),
+  phone: bdPhoneSchema,
   otp: z
     .string()
     .length(6, 'OTP must be exactly 6 digits')

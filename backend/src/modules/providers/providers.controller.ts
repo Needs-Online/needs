@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { ProvidersService } from './providers.service';
 import {
   registerProviderSchema,
+  applyProviderSchema,
+  updateProviderMeSchema,
+  updateProviderServicesSchema,
   submitKycSchema,
   updateAvailabilitySchema,
   assignServiceSchema,
@@ -15,26 +18,63 @@ import { AuthenticatedNextRequest } from '@/common/guards/auth.guard';
 export class ProvidersController {
   constructor(private readonly providersService: ProvidersService = new ProvidersService()) {}
 
-  async getProfile(req: AuthenticatedNextRequest): Promise<NextResponse> {
+  async getMe(req: AuthenticatedNextRequest): Promise<NextResponse> {
     try {
       const profile = await this.providersService.getProfileByUserId(req.user.userId);
-      return NextResponse.json(successResponse(profile, 'Provider profile retrieved'));
+      return NextResponse.json(successResponse(profile, 'Provider profile retrieved successfully'));
     } catch (error) {
       return handleApiError(error);
     }
   }
 
-  async register(req: AuthenticatedNextRequest): Promise<NextResponse> {
+  async updateMe(req: AuthenticatedNextRequest): Promise<NextResponse> {
     try {
-      const dto = await validateBody(req, registerProviderSchema);
-      const provider = await this.providersService.registerProvider(req.user.userId, dto);
+      const dto = await validateBody(req, updateProviderMeSchema);
+      const updated = await this.providersService.updateProfile(req.user.userId, dto);
+      return NextResponse.json(successResponse(updated, 'Provider profile updated successfully'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async applyProvider(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    try {
+      const dto = await validateBody(req, applyProviderSchema);
+      const provider = await this.providersService.applyProvider(req.user.userId, dto);
       return NextResponse.json(
-        successResponse(provider, 'Provider registration submitted. Please complete KYC.'),
+        successResponse(provider, 'Provider application submitted successfully. Please complete KYC.'),
         { status: 201 }
       );
     } catch (error) {
       return handleApiError(error);
     }
+  }
+
+  async getServices(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    try {
+      const services = await this.providersService.getServices(req.user.userId);
+      return NextResponse.json(successResponse(services, 'Provider services retrieved successfully'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async updateServices(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    try {
+      const dto = await validateBody(req, updateProviderServicesSchema);
+      const services = await this.providersService.setServices(req.user.userId, dto.serviceIds);
+      return NextResponse.json(successResponse(services, 'Provider services updated successfully'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async getProfile(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    return this.getMe(req);
+  }
+
+  async register(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    return this.applyProvider(req);
   }
 
   async submitKyc(req: AuthenticatedNextRequest): Promise<NextResponse> {

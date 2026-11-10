@@ -54,6 +54,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class InternalServerError extends AppError {
+  constructor(message = 'Internal server error', details: unknown = null) {
+    super(message, 500, 'INTERNAL_SERVER_ERROR', details);
+  }
+}
+
 export function handleApiError(error: unknown): NextResponse {
   if (error instanceof ZodError) {
     return NextResponse.json(

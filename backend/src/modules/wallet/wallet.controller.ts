@@ -6,6 +6,8 @@ import {
   topupWalletSchema,
   requestPayoutSchema,
   listTransactionsQuerySchema,
+  listPayoutsQuerySchema,
+  processPayoutSchema,
 } from './dto/wallet.dto';
 import { successResponse } from '@/common/dto/response.dto';
 import { handleApiError } from '@/common/errors/app-error';
@@ -50,7 +52,43 @@ export class WalletController {
         req.user.providerId,
         body
       );
-      return NextResponse.json(successResponse(result, 'Payout requested successfully'));
+      return NextResponse.json(successResponse(result, 'Payout requested successfully'), {
+        status: 201,
+      });
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async listPayouts(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    try {
+      const query = validateQuery(req, listPayoutsQuerySchema);
+      const result = await this.walletService.getProviderPayouts(req.user.providerId, query);
+      return NextResponse.json(successResponse(result, 'Payout history retrieved'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async adminListPayouts(req: AuthenticatedNextRequest): Promise<NextResponse> {
+    try {
+      const query = validateQuery(req, listPayoutsQuerySchema);
+      const result = await this.walletService.getAllPayouts(query);
+      return NextResponse.json(successResponse(result, 'Payout requests retrieved'));
+    } catch (error) {
+      return handleApiError(error);
+    }
+  }
+
+  async adminProcessPayout(req: AuthenticatedNextRequest, payoutId: string): Promise<NextResponse> {
+    try {
+      const body = await validateBody(req, processPayoutSchema);
+      const result = await this.walletService.processPayout(
+        req.user.userId,
+        payoutId,
+        body
+      );
+      return NextResponse.json(successResponse(result, 'Payout request updated successfully'));
     } catch (error) {
       return handleApiError(error);
     }

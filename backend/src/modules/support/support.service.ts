@@ -1,5 +1,10 @@
 import { SupportRepository } from './support.repository';
-import { CreateTicketDto, AddTicketMessageDto, ListTicketsQueryDto } from './dto/support.dto';
+import {
+  CreateTicketDto,
+  AddTicketMessageDto,
+  ListTicketsQueryDto,
+  UpdateTicketStatusDto,
+} from './dto/support.dto';
 import { Role, TicketStatus } from '@/common/enums';
 import { NotFoundError, ForbiddenError } from '@/common/errors/app-error';
 
@@ -64,5 +69,32 @@ export class SupportService {
     }
 
     return message;
+  }
+
+  async updateTicketStatus(
+    ticketId: string,
+    adminUserId: string,
+    userRole: Role,
+    dto: UpdateTicketStatusDto
+  ) {
+    const isAdmin = [Role.ADMIN, Role.SUPER_ADMIN, Role.SUPPORT].includes(userRole);
+    if (!isAdmin) {
+      throw new ForbiddenError('Only support staff or administrators can update ticket status');
+    }
+
+    const ticket = await this.supportRepo.findTicketById(ticketId);
+    if (!ticket) {
+      throw new NotFoundError('Support ticket not found');
+    }
+
+    return this.supportRepo.updateTicketStatus(
+      ticketId,
+      dto.status as any,
+      dto.assignedAdminId || adminUserId
+    );
+  }
+
+  async getFaqs(category?: string) {
+    return this.supportRepo.findFaqs(category);
   }
 }

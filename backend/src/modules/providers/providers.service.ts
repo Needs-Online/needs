@@ -1,5 +1,12 @@
 import { ProvidersRepository } from './providers.repository';
-import { RegisterProviderDto, SubmitKycDto, AssignServiceDto, VerifyKycDto } from './dto/provider.dto';
+import {
+  RegisterProviderDto,
+  ApplyProviderDto,
+  SubmitKycDto,
+  AssignServiceDto,
+  VerifyKycDto,
+  UpdateProviderMeDto,
+} from './dto/provider.dto';
 import { ProviderStatus, KycStatus } from '@/common/enums';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@/common/errors/app-error';
 
@@ -28,6 +35,25 @@ export class ProvidersService {
       throw new BadRequestError('User already has a provider profile registered');
     }
     return this.providersRepo.createProvider(userId, dto);
+  }
+
+  async applyProvider(userId: string, dto: ApplyProviderDto) {
+    return this.registerProvider(userId, dto);
+  }
+
+  async updateProfile(userId: string, dto: UpdateProviderMeDto) {
+    const provider = await this.getProfileByUserId(userId);
+    return this.providersRepo.updateProvider(provider.id, dto);
+  }
+
+  async getServices(userId: string) {
+    const provider = await this.getProfileByUserId(userId);
+    return this.providersRepo.getProviderServices(provider.id);
+  }
+
+  async setServices(userId: string, serviceIds: string[]) {
+    const provider = await this.getProfileByUserId(userId);
+    return this.providersRepo.setProviderServices(provider.id, serviceIds);
   }
 
   async submitKyc(userId: string, dto: SubmitKycDto) {

@@ -1,5 +1,5 @@
 import { UsersRepository } from './users.repository';
-import { UpdateProfileDto, CreateAddressDto } from './dto/user.dto';
+import { UpdateProfileDto, CreateAddressDto, UpdateAddressDto } from './dto/user.dto';
 import { NotFoundError } from '@/common/errors/app-error';
 
 export class UsersService {
@@ -24,6 +24,22 @@ export class UsersService {
 
   async addAddress(userId: string, dto: CreateAddressDto) {
     return this.usersRepo.createAddress(userId, dto);
+  }
+
+  async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto) {
+    const updated = await this.usersRepo.updateAddress(userId, addressId, dto);
+    if (!updated) {
+      throw new NotFoundError('Address not found');
+    }
+    return updated;
+  }
+
+  async setDefaultAddress(userId: string, addressId: string) {
+    const updated = await this.usersRepo.setDefaultAddress(userId, addressId);
+    if (!updated) {
+      throw new NotFoundError('Address not found');
+    }
+    return updated;
   }
 
   async deleteAddress(userId: string, addressId: string) {

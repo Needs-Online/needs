@@ -16,6 +16,7 @@ describe('CatalogService (Unit)', () => {
       createCategory: vi.fn(),
       findServices: vi.fn(),
       findServiceById: vi.fn(),
+      findServiceBySlug: vi.fn().mockResolvedValue(null),
       createService: vi.fn(),
     };
 

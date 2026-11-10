@@ -19,10 +19,15 @@ export interface WebhookVerificationResult {
   amount: number;
   isPaid: boolean;
   metadata?: Record<string, unknown>;
+  rejectionReason?: string;
 }
 
 export interface PaymentGatewayAdapter {
   gateway: PaymentMethod;
   initiatePayment(params: InitiatePaymentParams): Promise<InitiatePaymentResult>;
-  verifyWebhook(payload: unknown, signature?: string): Promise<WebhookVerificationResult>;
+  verifyWebhook(
+    payload: unknown,
+    signature?: string,
+    rawBody?: string
+  ): Promise<WebhookVerificationResult>;
 }

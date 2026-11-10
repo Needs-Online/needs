@@ -1,6 +1,6 @@
 import { prisma } from '@/database/prisma';
 import { User, UserAddress, AccountStatus } from '@prisma/client';
-import { UpdateProfileDto, CreateAddressDto } from './dto/user.dto';
+import { UpdateProfileDto, CreateAddressDto, UpdateAddressDto } from './dto/user.dto';
 
 export class UsersRepository {
   async findById(userId: string): Promise<User | null> {
@@ -23,6 +23,12 @@ export class UsersRepository {
     });
   }
 
+  async findAddressById(userId: string, addressId: string): Promise<UserAddress | null> {
+    return prisma.userAddress.findFirst({
+      where: { id: addressId, userId },
+    });
+  }
+
   async createAddress(userId: string, data: CreateAddressDto): Promise<UserAddress> {
     return prisma.$transaction(async (tx) => {
       if (data.isDefault) {
@@ -38,6 +44,52 @@ export class UsersRepository {
           ...data,
           userId,
         },
+      });
+    });
+  }
+
+  async updateAddress(
+    userId: string,
+    addressId: string,
+    data: UpdateAddressDto
+  ): Promise<UserAddress | null> {
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.userAddress.findFirst({
+        where: { id: addressId, userId },
+      });
+      if (!existing) return null;
+
+      if (data.isDefault) {
+        await tx.userAddress.updateMany({
+          where: { userId, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+
+      return tx.userAddress.update({
+        where: { id: addressId },
+        data,
+      });
+    });
+  }
+
+  async setDefaultAddress(userId: string, addressId: string): Promise<UserAddress | null> {
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.userAddress.findFirst({
+        where: { id: addressId, userId },
+      });
+      if (!existing) return null;
+
+      // Demote all
+      await tx.userAddress.updateMany({
+        where: { userId, isDefault: true },
+        data: { isDefault: false },
+      });
+
+      // Promote specified
+      return tx.userAddress.update({
+        where: { id: addressId },
+        data: { isDefault: true },
       });
     });
   }

@@ -132,24 +132,24 @@ This document details the multi-phase roadmap to build the **Needs Backend** usi
 ### PHASE 5: Payments, Double-Entry Wallet, Coupons, Reviews & Support
 *Goal: Production payment gateway integrations, immutable financial ledger, dispute handling, coupons, and ratings.*
 
-- [ ] **Payment Adapters**:
+- [x] **Payment Adapters**:
   - Adapter pattern for Bangladeshi payment gateways: **bKash**, **Nagad**, and **SSLCommerz**.
   - Server-side payment initialization and redirect URL generation.
   - Secure webhook endpoints with HMAC-SHA256 signature verification and replay prevention.
   - Idempotency key tracking in PostgreSQL (`idempotency_keys`).
-- [ ] **Wallet & Payouts Module**:
+- [x] **Wallet & Payouts Module**:
   - Double-entry ledger architecture (`wallets`, `wallet_transactions`).
   - Credits and debits recorded with balance verification.
   - Provider earnings calculation, platform commission deduction, and withdrawal/payout requests.
   - Immutable ledger records (no `UPDATE` or `DELETE` allowed on historical transactions).
-- [ ] **Coupons & Promotions**:
+- [x] **Coupons & Promotions**:
   - Promo code validation engine (percentage discount, fixed discount, max cap).
   - Usage limits per user, expiration dates, and anti-abuse validation.
-- [ ] **Reviews & Ratings**:
+- [x] **Reviews & Ratings**:
   - Post-service review submission (restricted strictly to verified completed bookings).
   - 1-to-5 star rating with commentary and moderation flags.
   - Automated asynchronous recalculation of provider overall rating.
-- [ ] **Support Module**:
+- [x] **Support Module**:
   - Ticket creation for customers and providers.
   - Ticket priority, status tracking (`OPEN`, `IN_REVIEW`, `RESOLVED`, `CLOSED`), and administrative assignment.
 
@@ -158,22 +158,22 @@ This document details the multi-phase roadmap to build the **Needs Backend** usi
 ### PHASE 6: Analytics, Security Hardening, Verification & Deployment
 *Goal: Business analytics, ClickHouse integration readiness, security audits, automated end-to-end testing, and production packaging.*
 
-- [ ] **Analytics Module**:
+- [x] **Analytics Module**:
   - Booking conversion metrics, cancellation analysis, and revenue aggregation.
   - ClickHouse event stream adapter interface (ready for high-volume ingest).
   - Strict privacy rule enforcement: zero KYC/PII used in analytics.
-- [ ] **Admin RBAC & Audit Logging**:
+- [x] **Admin RBAC & Audit Logging**:
   - Granular RBAC (`SuperAdmin`, `Operations`, `Support`, `Finance`).
   - Immutable audit logs capturing IP address, actor ID, action, and JSON payload diff.
-- [ ] **Security Hardening**:
+- [x] **Security Hardening**:
   - Rate limiting with Redis token-bucket middleware.
   - Helmet-equivalent security headers, CORS origin whitelisting, input sanitization.
   - Structured logging with Pino (redacting passwords, tokens, and PII).
-- [ ] **Automated Testing Suite**:
+- [x] **Automated Testing Suite**:
   - Unit tests for services and state machines.
   - Integration tests for API routes, database repositories, and Redis locks.
   - Concurrency tests for double-assignment prevention and duplicate webhook handling.
-- [ ] **Deployment Deliverables**:
+- [x] **Deployment Deliverables**:
   - Production Docker Compose configuration.
   - Comprehensive documentation (`README.md`, `ARCHITECTURE.md`, `API_DOCUMENTATION.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `DEPLOYMENT.md`, `IMPLEMENTATION_STATUS.md`).
 
